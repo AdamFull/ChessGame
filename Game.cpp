@@ -73,6 +73,8 @@ void Game::calcFiguresOnEnemyTeretory(uint32_t cursor_x, uint32_t cursor_y){
             for(uint32_t i = 0; i < 3; i++){
                 if(comp(getCurrentPlayer()->gerFigures()[counter].getPosition(), start_position)){
                     getCurrentPlayer()->gerFigures()[counter++].setIsInEnemyArea(true);
+                }else{
+                    getCurrentPlayer()->gerFigures()[counter++].setIsInEnemyArea(false);
                 }
                 start_position.pos_y--;
             }
@@ -84,7 +86,9 @@ void Game::calcFiguresOnEnemyTeretory(uint32_t cursor_x, uint32_t cursor_y){
         for(uint32_t j = 0; j < 3; j++){
             for(uint32_t i = 0; i < 3; i++){
                 if(comp(getCurrentPlayer()->gerFigures()[counter].getPosition(), start_position)){
-                    getCurrentPlayer()->gerFigures()[counter++].setIsInEnemyArea(true);
+                    getCurrentPlayer()->gerFigures()[counter].setIsInEnemyArea(true);
+                }else{
+                    getCurrentPlayer()->gerFigures()[counter].setIsInEnemyArea(false);
                 }
                 start_position.pos_x--;
             }
