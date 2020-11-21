@@ -1,104 +1,157 @@
 #include "Game.h"
 #include "math.h"
+#include <random>
+#include <time.h>
 
+/********************************************************************************/
 Game::Game(){
-    players[0] = Player(true);
-    players[1] = Player(false);
+    gameBoard = new GameBoard();
     curent_turn = 0;
-    all_time_turns = 0;
-    selected_figure = 9;
+    fillBoard();
+    initAIWeights();
 }
 
+/********************************************************************************/
 Game::~Game(){
 
 }
 
-uint32_t Game::checkCursorCollision(uint32_t cursor_x, uint32_t cursor_y){
-    for(uint32_t i = 0; i < 9; i++){
-        if(players[curent_turn].gerFigures()[i].cursorCollision(cursor_x, cursor_y)){
-            return players[curent_turn].gerFigures()[i].getId();
+/********************************************************************************/
+void Game::fillBoard(){
+    Pos firstPlayerAngle = { 7, 0 };
+    Pos secondPlayerAngle = { 0, 7 };
+    Pos currentPos;
+    uint32_t counter = 0;
+
+    currentPos = firstPlayerAngle;
+    for(uint32_t y = 0; y < 3; y++){
+        for(uint32_t x = 0; x < 3; x++){
+            gameBoard->setFigure(currentPos.px, currentPos.py, counter++, 0);
+            currentPos.px--;
         }
+        currentPos.px = firstPlayerAngle.px;
+        currentPos.py++;
     }
-    return 9;
-}
 
-uint32_t Game::checkGlobalCollision(uint32_t cursor_x, uint32_t cursor_y){
-    for(uint32_t j = 0; j < 2; j++){
-        for(uint32_t i = 0; i < 9; i++){
-            if(players[j].gerFigures()[i].cursorCollision(cursor_x, cursor_y)){
-                return players[j].gerFigures()[i].getId();
-            }
+    counter = 0;
+    currentPos = secondPlayerAngle;
+    for(uint32_t y = 0; y < 3; y++){
+        for(uint32_t x = 0; x < 3; x++){
+            gameBoard->setFigure(currentPos.px, currentPos.py, counter++, 1);
+            currentPos.py--;
         }
+        currentPos.py = secondPlayerAngle.py;
+        currentPos.px++;
     }
-    return 9;
 }
-
-bool Game::checkStepDelta(uint32_t cursor_x, uint32_t cursor_y){
-    Pos selected = players[curent_turn].gerFigures()[selected_figure].getPosition();
-    Pos new_position = { abs((int)selected.pos_x - (int)cursor_x), abs((int)selected.pos_y - (int)cursor_y) };
-    
-    if(new_position.pos_x > 1 || new_position.pos_y > 1) return false;
-    return true;
-}
-
-Pos *Game::getFreePlaces(){
-    static Pos nearbyFigures[4];
-    Pos cfp = players[curent_turn].getFigureById(selected_figure).getPosition();
-
-    if(checkCursorCollision(cfp.pos_x + 1, cfp.pos_y) == 9)
-    nearbyFigures[0] = {cfp.pos_x + 1, cfp.pos_y};
-    if(checkCursorCollision(cfp.pos_x - 1, cfp.pos_y) == 9)
-    nearbyFigures[1] = {cfp.pos_x - 1, cfp.pos_y};
-    if(checkCursorCollision(cfp.pos_x, cfp.pos_y + 1) == 9)
-    nearbyFigures[2] = {cfp.pos_x, cfp.pos_y + 1};
-    if(checkCursorCollision(cfp.pos_x, cfp.pos_y - 1) == 9)
-    nearbyFigures[3] = {cfp.pos_x, cfp.pos_y - 1};
-
-    return nearbyFigures;
-}
-
-void Game::nextTern(){
+/********************************************************************************/
+void Game::toggleTurn(){
     if(curent_turn == 0) curent_turn = 1;
     else curent_turn = 0;
 }
 
-void Game::calcFiguresOnEnemyTeretory(uint32_t cursor_x, uint32_t cursor_y){
-    Area enemyArea = getNextPlayer()->getArea();
-    uint32_t counter = 0;
-    Pos start_position;
-
-    if(curent_turn == 0){
-        start_position = enemyArea.start_pos;
-        for(uint32_t j = 0; j < 3; j++){
-            for(uint32_t i = 0; i < 3; i++){
-                if(comp(getCurrentPlayer()->gerFigures()[counter].getPosition(), start_position)){
-                    getCurrentPlayer()->gerFigures()[counter++].setIsInEnemyArea(true);
-                }else{
-                    getCurrentPlayer()->gerFigures()[counter++].setIsInEnemyArea(false);
-                }
-                start_position.pos_y--;
-            }
-            start_position.pos_y = enemyArea.start_pos.pos_y;
-            start_position.pos_x++;
-        }
-    }else{
-        start_position = enemyArea.start_pos;
-        for(uint32_t j = 0; j < 3; j++){
-            for(uint32_t i = 0; i < 3; i++){
-                if(comp(getCurrentPlayer()->gerFigures()[counter].getPosition(), start_position)){
-                    getCurrentPlayer()->gerFigures()[counter].setIsInEnemyArea(true);
-                }else{
-                    getCurrentPlayer()->gerFigures()[counter].setIsInEnemyArea(false);
-                }
-                start_position.pos_x--;
-            }
-            start_position.pos_x = enemyArea.start_pos.pos_x;
-            start_position.pos_y++;
+//Ai methods
+/********************************************************************************/
+void Game::AI_Worker(){
+    if(curent_turn == 1){
+        if(selectFigure()){
+            toggleTurn();
         }
     }
-    getCurrentPlayer()->calcNumberOfFiguresOnEnemyArea();
 }
 
-bool Game::endGame(){
+/********************************************************************************/
+void Game::initAIWeights(){
+    uint32_t counter = 0;
+    for(uint32_t y = 0; y < 8; y++){
+        for(uint32_t x = 0; x < 8; x++){
+            AI_weights[y][x] = 1;
+        }
+    }
+}
 
-} 
+/********************************************************************************/
+void Game::recalcWeights(){
+
+}
+
+/********************************************************************************/
+bool Game::selectFigure(){
+    bool figure_selected = false;
+    uint32_t collisions[4] = {0};
+    uint32_t weights[4] = {0};
+
+    Pos sPos;
+    while(!figure_selected){
+        gameBoard->deselectCell();
+        srand(time(NULL));
+        uint32_t figureId = rand()%8;
+        if(gameBoard->findAndSelectCell(figureId, 1)){
+            memcpy(collisions, getCollisions(), 4*sizeof(uint32_t));
+            if(sum(collisions, 4) > 0) figure_selected = true;
+        }
+    }
+    memcpy(weights, getWeights(collisions), 4*sizeof(uint32_t));
+    
+    sPos = gameBoard->getSelectedCellPosition();
+
+    switch (max(weights, 4)){
+        case 0: gameBoard->moveSelectedCell(sPos.px - 1, sPos.py); break;
+        case 1: gameBoard->moveSelectedCell(sPos.px, sPos.py+1); break;
+        case 2: gameBoard->moveSelectedCell(sPos.px + 1, sPos.py); break;
+        case 3: gameBoard->moveSelectedCell(sPos.px, sPos.py-1); break;
+    }
+
+    return true;
+}
+
+/********************************************************************************/
+uint32_t *Game::getCollisions(){
+    static uint32_t collisions[4] = {0, 0, 0, 0};
+    Pos curPos = gameBoard->getSelectedCellPosition();
+    if(gameBoard->canIMoveCell(curPos.px-1, curPos.py)) collisions[0] = 1;
+    if(gameBoard->canIMoveCell(curPos.px, curPos.py+1)) collisions[1] = 1;
+    if(gameBoard->canIMoveCell(curPos.px+1, curPos.py)) collisions[2] = 1;
+    if(gameBoard->canIMoveCell(curPos.px, curPos.py-1)) collisions[3] = 1;
+    return collisions;
+}
+
+/********************************************************************************/
+uint32_t *Game::getWeights(uint32_t *collisions){
+    static uint32_t weights[4] = {0, 0, 0, 0};
+    Pos curPos = gameBoard->getSelectedCellPosition();
+    Pos newPos;
+
+    newPos = { curPos.px - 1, curPos.py };
+    if(isPositionCorrect(newPos))
+    weights[0] = collisions[0] * AI_weights[newPos.px][newPos.py];
+    newPos = { curPos.px, curPos.py+1 };
+    if(isPositionCorrect(newPos))
+    weights[1] = collisions[1] * AI_weights[newPos.px][newPos.py];
+    newPos = { curPos.px + 1, curPos.py };
+    if(isPositionCorrect(newPos))
+    weights[2] = collisions[2] * AI_weights[newPos.px][newPos.py];
+    newPos = { curPos.px, curPos.py-1 };
+    if(isPositionCorrect(newPos))
+    weights[3] = collisions[3] * AI_weights[newPos.px][newPos.py];
+
+    return weights;
+}
+
+uint32_t Game::sum(uint32_t *array, uint32_t size){
+    uint32_t result = 0;
+    for(uint32_t i = 0; i < size; i++) result += array[i];
+    return result;
+}
+
+uint32_t Game::max(uint32_t *array, uint32_t size){
+    uint32_t maximum = 0;
+    uint32_t max_pos = 0;
+    for(uint32_t i = 0; i < size; i++){
+        if(array[i] > maximum){
+            maximum = array[i];
+            max_pos = i;
+        } 
+    }
+    return max_pos;
+}

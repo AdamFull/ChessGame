@@ -64,24 +64,18 @@ void mouse_click_callback(GLFWwindow* window, int button, int action, int mods){
             return;
         }
 
-        if(currentGame->getSelectedFigure() != 9){
-            if(currentGame->checkGlobalCollision(cell_x, cell_y) == 9 && currentGame->checkStepDelta(cell_x, cell_y)){
-                currentGame->getCurrentPlayer()->move_figure(currentGame->getSelectedFigure(), {cell_x, cell_y});
-                currentGame->setSelectedFigure(9);
-                currentGame->calcFiguresOnEnemyTeretory(cell_x, cell_y);
-                currentGame->nextTern();
+        if(currentGame->getGameBoard()->isCellSelected()){
+            if(currentGame->getGameBoard()->moveSelectedCell(cell_x, cell_y)){
+                currentGame->toggleTurn();
             }
         }else{
-            //Checking is figure exist on this position
-            uint32_t collision_result = currentGame->checkCursorCollision(cell_x, cell_y);
-            if(collision_result > 8) return;
-
-            currentGame->setSelectedFigure(collision_result);
-            printf("Figure %d: %d : %d\n", collision_result, cell_x, cell_y);
+            if(currentGame->getGameBoard()->selectCell(cell_x, cell_y, 0)){
+                printf("Selected figure: %d : %d\n", cell_x, cell_y);
+            }
         }
     }else if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS){
-        if(currentGame->getSelectedFigure() != 9){
-            currentGame->setSelectedFigure(9);
+        if(currentGame->getGameBoard()->isCellSelected()){
+            currentGame->getGameBoard()->deselectCell();
         }
     }
 }
@@ -91,28 +85,16 @@ void draw_figures(){
     start_position_x = (width-board_size)/2;
     start_position_y = (height-board_size)/2;
 
-    for(uint32_t n = 0; n < 2; n++){
-        start_position_x_cursor = start_position_x;
-        start_position_y_cursor = start_position_y;
-
-        for(uint32_t i = 0; i < 9; i++){
-            Pos current_position = currentGame->getPlayer(n)->gerFigures()[i].getPosition();
-            start_position_x_cursor = start_position_x + cell_size * current_position.pos_x;
-            start_position_y_cursor = start_position_y + cell_size * current_position.pos_y;
-
-            if(currentGame->getCurrentTurn() == n && currentGame->getSelectedFigure() == i){
-                display->gfx.fillRect(start_position_x_cursor, start_position_y_cursor, cell_size, cell_size, CL_YELLOW());
-
-                Pos nearbyPositions[4];
-                for(uint32_t k = 0; k < 4; k++) nearbyPositions[k] = currentGame->getFreePlaces()[k];
-                //memcpy(nearbyPositions ,, sizeof(Pos) * 4);
-                for(uint32_t j = 0; j < 4; j++){
-                    display->gfx.fillRect(start_position_x + (nearbyPositions[i].pos_x*cell_size), start_position_y + (nearbyPositions[i].pos_y*cell_size), cell_size, cell_size, CL_YELLOW());
+    for(uint32_t y = 0; y < 8; y++){
+        for(uint32_t x = 0; x < 8; x++){
+            if(!currentGame->getGameBoard()->getCell(x, y)->isEmpty()){
+                if(currentGame->getGameBoard()->isCellSelected()) {
+                    Pos cellPos = currentGame->getGameBoard()->getSelectedCellPosition();
+                    if(x == cellPos.px && y == cellPos.py) display->gfx.fillRect(start_position_x + x*cell_size, start_position_y + y*cell_size, cell_size, cell_size, CL_YELLOW());
                 }
-            }
 
-            display->gfx.drawBitmap(start_position_x_cursor, start_position_y_cursor, peshka, 37, 37, n == 0 ? CL_BLUE() : CL_RED());
-            
+                display->gfx.drawBitmap(start_position_x + x*cell_size, start_position_y + y*cell_size, peshka, 37, 37, currentGame->getGameBoard()->getCell(x, y)->getFigure()->getOwnerId() == 0 ? CL_BLUE() : CL_RED());
+            }
         }
     }
 }
@@ -181,21 +163,12 @@ int main(int argc, char* argv[]){
 
     if(display->init("..\\IoT_Screen_Emulator\\shaders\\")){
         while(display->getWindowWorker()){
+
+            currentGame->AI_Worker();
+
             display->clear();
+
             /*****************Draw loop******************/
-            display->gfx.setTextSize(2);
-            display->gfx.setCursor(0, height-10);
-            display->gfx.print("Score board");
-            display->gfx.setCursor(0, height-30);
-            if(currentGame->getCurrentTurn() == 1) display->gfx.print(">");
-            display->gfx.print("Red: ", CL_RED());
-            itoa(currentGame->getPlayer(1)->getNumberOfFiguresOnEnemyArea(), tempBuffer, 10);
-            display->gfx.print(tempBuffer, CL_RED());
-            display->gfx.setCursor(0, height-50);
-            itoa(currentGame->getPlayer(0)->getNumberOfFiguresOnEnemyArea(), tempBuffer, 10);
-            if(currentGame->getCurrentTurn() == 0) display->gfx.print(">");
-            display->gfx.print("Blue: ", CL_BLUE());
-            display->gfx.println(tempBuffer, CL_BLUE());
             draw_game_field();
             draw_figures();
             /*****************Draw loop******************/

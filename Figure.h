@@ -3,40 +3,24 @@
 
 #include "stdint.h"
 
-//Position struct for figures
-typedef struct {
-    uint8_t pos_x, pos_y;
-} Pos;
-
-//Game logic structure for detecting player area
-typedef struct {
-    Pos start_pos, end_pos;
-} Area;
-
 class Figure{
 public:
-    Figure();
-    ~Figure();
+    Figure(){
+        fig_id = 99;
+        owner_id = 99;
+    }
 
-    void setFigurePosition(uint8_t x, uint8_t y) { fig_pos = {x, y}; }
-    void setFigurePosition(Pos new_pos) { fig_pos = new_pos; }
-    void setOwner(bool new_owner) { owner = new_owner; }
+    void init(uint32_t fig_id, uint32_t owner_id){
+        this->fig_id = fig_id;
+        this->owner_id = owner_id;
+    }
 
-    void setId(uint32_t id) { fig_id = id; }
     uint32_t getId() { return fig_id; }
-
-    bool cursorCollision(uint8_t x, uint8_t y) { return (x == fig_pos.pos_x && y == fig_pos.pos_y); }
-
-    void setIsInEnemyArea(bool state) { is_in_enemy_area = state; }
-    bool getIsInEnemyArea() { return is_in_enemy_area; }
-
-    Pos getPosition() { return fig_pos; }
+    uint32_t getOwnerId() { return owner_id; }
 
 private:
-    Pos fig_pos;
     uint32_t fig_id;
-    bool is_in_enemy_area;
-    bool owner;
+    uint32_t owner_id;
 };
 
 #endif
