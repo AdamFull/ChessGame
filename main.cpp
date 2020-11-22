@@ -40,18 +40,28 @@ long remap(long x, long in_min, long in_max, long out_min, long out_max){
 }
 
 
-//Input callbacks
+/*******************************************************************************/
+/********************************Input callbacks********************************/
+/*******************************************************************************/
 extern "C"
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    
+    if(key == GLFW_KEY_R && action == GLFW_PRESS){
+        delete currentGame;
+        currentGame = new Game();
+    }else if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
+        delete currentGame;
+        exit(0);
+    }
 }
 
+/*******************************************************************************/
 extern "C"
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     m_pos_x = xpos;
     m_pos_y = remap((uint32_t)ypos, 0, height, height, 0);
 }
 
+/*******************************************************************************/
 extern "C"
 void mouse_click_callback(GLFWwindow* window, int button, int action, int mods){
     uint32_t cell_x, cell_y;
@@ -81,18 +91,32 @@ void mouse_click_callback(GLFWwindow* window, int button, int action, int mods){
 }
 
 /*******************************************************************************/
+/*********************************Board draw************************************/
+/*******************************************************************************/
 void draw_figures(){
     start_position_x = (width-board_size)/2;
     start_position_y = (height-board_size)/2;
 
+    //Draw figures on board
     for(uint32_t y = 0; y < 8; y++){
         for(uint32_t x = 0; x < 8; x++){
             if(!currentGame->getGameBoard()->getCell(x, y)->isEmpty()){
                 if(currentGame->getGameBoard()->isCellSelected()) {
                     Pos cellPos = currentGame->getGameBoard()->getSelectedCellPosition();
+                    uint32_t colis[4] = {0};
+                    memcpy(colis, currentGame->getCollisions(), 4*sizeof(uint32_t));
+
+                    //Draw avaliable turns
+                    if(colis[0] > 0) display->gfx.drawBitmap(start_position_x + (cellPos.px-1)*cell_size, start_position_y + cellPos.py*cell_size, peshka, 37, 37, CL_GREY());
+                    if(colis[1] > 0) display->gfx.drawBitmap(start_position_x + cellPos.px*cell_size, start_position_y + (cellPos.py+1)*cell_size, peshka, 37, 37, CL_GREY());
+                    if(colis[2] > 0) display->gfx.drawBitmap(start_position_x + (cellPos.px+1)*cell_size, start_position_y + cellPos.py*cell_size, peshka, 37, 37, CL_GREY());
+                    if(colis[3] > 0) display->gfx.drawBitmap(start_position_x + cellPos.px*cell_size, start_position_y + (cellPos.py-1)*cell_size, peshka, 37, 37, CL_GREY());
+
+                    //Spotlight selected figure
                     if(x == cellPos.px && y == cellPos.py) display->gfx.fillRect(start_position_x + x*cell_size, start_position_y + y*cell_size, cell_size, cell_size, CL_YELLOW());
                 }
 
+                //Draw figure
                 display->gfx.drawBitmap(start_position_x + x*cell_size, start_position_y + y*cell_size, peshka, 37, 37, currentGame->getGameBoard()->getCell(x, y)->getFigure()->getOwnerId() == 0 ? CL_BLUE() : CL_RED());
             }
         }
@@ -112,6 +136,7 @@ void draw_game_field(){
 
     for(uint32_t c = 0; c < cells_in_row; c++){
         for(uint32_t r = 0; r < cells_in_row; r++){
+            //Draw white board cells
             if(is_white_cell){
                 display->gfx.fillRect(start_position_x_cursor, start_position_y_cursor, cell_size, cell_size, CL_WHITE());
             }
@@ -134,6 +159,7 @@ void draw_game_field(){
     start_position_x_cursor = start_position_x;
     start_position_y_cursor = start_position_y + cell_size/1.5f;
 
+    //Draw numders
     for(uint32_t rc = 0; rc < cells_in_row; rc++){
         char itoc = '0' + rc + 1;
         display->gfx.drawChar(start_position_x_cursor - cell_size/2, start_position_y_cursor, CL_BLACK(), CL_WHITE(), 2, itoc);
@@ -144,6 +170,7 @@ void draw_game_field(){
     start_position_x_cursor = start_position_x + cell_size/3;
     start_position_y_cursor = start_position_y;
 
+    //Draw characters
     for(uint32_t rc = 0; rc < cells_in_row; rc++){
         char itoc = 'a' + rc;
         display->gfx.drawChar(start_position_x_cursor, start_position_y_cursor - cell_size/3, CL_BLACK(), CL_WHITE(), 2, itoc);
