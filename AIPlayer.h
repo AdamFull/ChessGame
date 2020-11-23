@@ -9,10 +9,11 @@ typedef struct{
 
 class AIPlayer{
 private:
-    const int maxDepth = 3;
+    const size_t maxDepth = 3;
     const int maxPathDepth = 10;
-    void clearTree(std::vector<AIMove*> &tree);
-    int32_t calculateDistance(Pos start, Pos end);
+    void clearTree(std::vector<AIMove*> *tree);
+    int32_t calcShortDistance(Pos start, Pos end);
+    int32_t calcLongDistance(Pos start, Pos end);
     GameBoard *gameBoard;
 public:
     AIPlayer(/* args */);
@@ -22,6 +23,8 @@ public:
     Area getMove();
 
     std::vector<AIMove*> possibleMovesForPiece(GameBoard *board,uint32_t fig_id, AIMove *parent);
+    int32_t calcMotivator(Pos newPos, int32_t score);
+    int32_t calcDemotivator(int32_t lScore, int32_t sScore);
 
 	AIMove *createTree(int treeDepth);
 

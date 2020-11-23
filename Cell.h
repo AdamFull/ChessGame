@@ -18,7 +18,7 @@ public:
         //delete figure;
     }
 
-    void placeFigure(uint32_t fig_id, uint32_t owner_id) { 
+    void placeFigure(int32_t fig_id, int32_t owner_id) { 
         figure.init(fig_id, owner_id); 
         isCellContainFigure = true;
     }
@@ -35,7 +35,7 @@ public:
         isCellContainFigure = false;
     }
 
-    void setCellPosition(uint32_t x, uint32_t y) { cellPosition = {x, y}; }
+    void setCellPosition(int32_t x, int32_t y) { cellPosition = {x, y, 0}; }
     Pos getCellPosition() { return cellPosition; }
 
     bool isEmpty() { return !isCellContainFigure; }

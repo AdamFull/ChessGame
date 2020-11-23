@@ -1,5 +1,5 @@
 #include "SE_MAIN.h"
-#include "string"
+#include <string>
 
 #include "Game.h"
 
@@ -73,14 +73,15 @@ void mouse_click_callback(GLFWwindow* window, int button, int action, int mods){
         if(cell_x > 7 || cell_x < 0 || cell_y > 7 || cell_x < 0){
             return;
         }
-
-        if(currentGame->getGameBoard()->isCellSelected()){
-            if(currentGame->getGameBoard()->moveSelectedCell(cell_x, cell_y)){
-                currentGame->toggleTurn();
-            }
-        }else{
-            if(currentGame->getGameBoard()->selectCell(cell_x, cell_y, 0)){
-                printf("Selected figure: %d : %d\n", cell_x, cell_y);
+        if(!currentGame->getEndgame()){
+            if(currentGame->getGameBoard()->isCellSelected()){
+                if(currentGame->getGameBoard()->moveSelectedCell(cell_x, cell_y)){
+                    currentGame->toggleTurn();
+                }
+            }else{
+                if(currentGame->getGameBoard()->selectCell(cell_x, cell_y, 0)){
+                    printf("Selected figure: %d : %d\n", cell_x, cell_y);
+                }
             }
         }
     }else if(button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS){
@@ -92,6 +93,37 @@ void mouse_click_callback(GLFWwindow* window, int button, int action, int mods){
 
 /*******************************************************************************/
 /*********************************Board draw************************************/
+/*******************************************************************************/
+void draw_text(){
+    uint32_t firstPlayer = currentGame->getGameBoard()->getPlayerScore(1);
+    uint32_t secondPlayer = currentGame->getGameBoard()->getPlayerScore(0);
+    
+    display->gfx.setTextSize(3);
+    display->gfx.setCursor(0, height-10);
+    display->gfx.print("Game score");
+    display->gfx.setTextSize(2);
+    display->gfx.setCursor(0, height-40);
+    display->gfx.print("Player: ", CL_BLUE());
+    display->gfx.print(std::to_string(firstPlayer).c_str(), CL_BLUE());
+    display->gfx.setCursor(0, height-60);
+    display->gfx.print("Computer: ", CL_RED());
+    display->gfx.print(std::to_string(secondPlayer).c_str(), CL_RED());
+    display->gfx.setCursor(width - 60, height-10);
+    display->gfx.print("Ugolki");
+
+    if(firstPlayer == 9 || secondPlayer == 9){
+        currentGame->endthisgame();
+        display->gfx.setTextSize(3);
+        display->gfx.setCursor((width/2)-8, height-10);
+        if(firstPlayer == 9) display->gfx.print("Blue win!");
+        if(secondPlayer == 9) display->gfx.print("Red win!");
+    }
+
+    display->gfx.setTextSize(1);
+    display->gfx.setCursor(0, 10);
+    display->gfx.print("[ESC] - close. [r] - new game.");
+}
+
 /*******************************************************************************/
 void draw_figures(){
     start_position_x = (width-board_size)/2;
@@ -196,6 +228,7 @@ int main(int argc, char* argv[]){
             display->clear();
 
             /*****************Draw loop******************/
+            draw_text();
             draw_game_field();
             draw_figures();
             /*****************Draw loop******************/

@@ -13,8 +13,6 @@ AIPlayer::AIPlayer(/* args */){
 /*******************************************************************************/
 AIPlayer::AIPlayer(GameBoard *gb){
     gameBoard = gb;
-    /*gameBoard = (GameBoard*)calloc(1, sizeof(GameBoard));
-    memcpy(gameBoard, gb, sizeof(GameBoard));*/
 }
 
 /*******************************************************************************/
@@ -23,65 +21,103 @@ AIPlayer::~AIPlayer(){
 }
 
 /************************************************************************************/
-void AIPlayer::clearTree(std::vector<AIMove*> &tree){
-	for(std::vector<AIMove *>::iterator i = tree.begin(); i != tree.end(); i++){
+void AIPlayer::clearTree(std::vector<AIMove*> *tree){
+	for(std::vector<AIMove *>::iterator i = tree->begin(); i != tree->end(); i++){
 		AIMove *m = *i;
 		if(m->next.size() != 0)
-			clearTree(m->next);
+			clearTree(&m->next);
 		delete m;
 	}
 }
 
-/************************************************************************************/
-int32_t AIPlayer::calculateDistance(Pos start, Pos end){
-    bool visited[8][8];
+int32_t randrange(int32_t max){
+    return rand()%max > max/2 ? 1 : -1;
+}
 
-    for(uint32_t y = 0; y < 8; y++){
-        for (uint32_t x = 0; x < 8; x++){
-            if(!gameBoard->getCell(x, y)->isEmpty()) visited[y][x] = true;
-            else visited[y][x] = false;
+/************************************************************************************/
+int32_t AIPlayer::calcShortDistance(Pos start, Pos end){
+    Pos target = end;
+    Pos curPos = target;
+    std::vector<Pos> freePos;
+    for(uint32_t y = 0; y < 3; y++){
+        for(uint32_t x = 0; x < 3; x++){
+            if(gameBoard->getCell(curPos.px, curPos.py)->isEmpty()){
+                freePos.push_back(curPos);
+            }
+            curPos.py--;
         }
-        
+        curPos.py = target.py;
+        curPos.px++;
     }
 
-    std::queue<Pos> qstart;
-    qstart.push(start);
-    visited[start.py][start.px] = true;
-    while (!qstart.empty()) { 
-        Pos cur = qstart.front();
-        qstart.pop();
+    for(Pos cur : freePos){
+        target = cur;
+        break;
+    }
+    // 
+    return (abs(start.py - target.py - rand()%6) + abs(start.px - target.px +rand()%6));
+}
 
+int32_t AIPlayer::calcLongDistance(Pos start, Pos end){
+    bool visited[8][8]; 
+    for (int y = 0; y < 8; y++) { 
+        for (int x = 0; x < 8; x++) { 
+            //if (!gameBoard->getCell(i, j)->isEmpty()) visited[i][j] = true; 
+            //if(gameBoard->isEnemyCell(i, j, 0)) visited[i][j] = true;
+            visited[y][x] = false; 
+        } 
+    }
+
+    std::queue<Pos> q; 
+    q.push(start); 
+    visited[start.px][start.py] = true; 
+
+    /*for (int y = 0; y < 8; y++) { 
+        for (int x = 0; x < 8; x++) {
+            printf("|%d", (int)visited[y][x]) ;
+        }
+        printf("\n");
+    }*/
+
+    while (!q.empty()) { 
+        Pos p = q.front(); 
+        q.pop(); 
+  
         // Destination found; 
-        if (cur.px == end.px && cur.py == end.py) 
-            return cur.dist; 
+        if (p.px == end.px && p.py == end.py) 
+            return p.dist; 
   
         // moving up 
-		if (cur.py - 1 >= 0 && visited[cur.py - 1][cur.px] == false) { 
-			qstart.push({cur.py - 1, cur.px, cur.dist + 1}); 
-			visited[cur.py - 1][cur.px] = true; 
-		} 
-
-		// moving down 
-		if (cur.py + 1 < 8 && visited[cur.py + 1][cur.px] == false) { 
-			qstart.push({cur.py + 1, cur.px, cur.dist + 1}); 
-			visited[cur.py + 1][cur.px] = true; 
-		} 
-
-		// moving left 
-		if (cur.px - 1 >= 0 && visited[cur.py][cur.px - 1] == false) { 
-			qstart.push({cur.py, cur.px - 1, cur.dist + 1}); 
-			visited[cur.py][cur.px - 1] = true; 
-		} 
-
-		// moving right 
-		if (cur.px + 1 < 8 && visited[cur.py][cur.px + 1] == false) { 
-			qstart.push({cur.py, cur.px + 1, cur.dist + 1}); 
-			visited[cur.py][cur.px + 1] = true; 
-		} 
-    }
-
-    return (abs(start.px - end.px) + abs(start.py - end.py));
+        if (p.py + 1 < 8 && 
+            visited[p.py + 1][p.px] == false) { 
+            q.push({p.py + 1, p.px, p.dist + 1}); 
+            visited[p.py + 1][p.px] = true; 
+        } 
+  
+        // moving down 
+        if (p.py - 1 >= 0 && 
+            visited[p.py - 1][p.px] == false) { 
+            q.push({p.py - 1, p.px, p.dist + 1}); 
+            visited[p.py - 1][p.px] = true; 
+        } 
+  
+        // moving left 
+        if (p.px - 1 >= 0 && 
+            visited[p.py][p.px - 1] == false) { 
+            q.push({p.py, p.px - 1, p.dist + 1}); 
+            visited[p.py][p.px - 1] = true; 
+        } 
+  
+         // moving right 
+        if (p.px + 1 < 8 && 
+            visited[p.py][p.px + 1] == false) { 
+            q.push({p.py, p.px + 1, p.dist + 1}); 
+            visited[p.py][p.px + 1] = true; 
+        } 
+    } 
+    return -1; 
 }
+
 
 /************************************************************************************/
 Area AIPlayer::getMove(){
@@ -96,9 +132,9 @@ Area AIPlayer::getMove(){
     std::vector<AIMove*> nowList = moveList;
 	std::vector<AIMove*> nextList;
 
-    for(int i = 0; i < this->maxDepth - 1; i++){
+    for(size_t i = 0; i < this->maxDepth - 1; i++){
 		//for each table in this level
-		for(int j = 0; j < nowList.size(); j++){
+		for(size_t j = 0; j < nowList.size(); j++){
 			AIMove *m = nowList[j];
             GameBoard &board = m->gameBoard;
 			//go through the pieces and generate a new level of movements
@@ -116,21 +152,7 @@ Area AIPlayer::getMove(){
 	AIMove *aiMove = getBestMove(moveList,0, this->maxDepth);
     Area newTurn = { aiMove->from, aiMove->to };
     printf("Move score: %d\n", aiMove->score);
-    for(AIMove* m : moveList) {
-        for(AIMove* mm : m->next){
-            for(AIMove* mmm : mm->next){
-                delete mmm;
-                mm->next.clear();
-            }
-            delete mm;
-            m->next.clear();
-        }
-        /*if(m->previous == nullptr){
-            delete m;
-            m->next.clear();
-        }*/
-    }
-	this->clearTree(moveList);
+	this->clearTree(&moveList);
 
     return newTurn;
 }
@@ -140,7 +162,8 @@ std::vector<AIMove*> AIPlayer::possibleMovesForPiece(GameBoard *board, uint32_t 
     std::vector<AIMove*> moveList;
     Pos curPos;
 
-    int dScore = 1;
+    int dDemot = 1;
+    int dMot = 1;
 
     board->findAndSelectCell(fig_id, 1);
 
@@ -148,61 +171,38 @@ std::vector<AIMove*> AIPlayer::possibleMovesForPiece(GameBoard *board, uint32_t 
 
     curPos = board->getSelectedCellPosition();
 
-    srand(time(NULL));
+    const Pos positions[4] = {{curPos.px-1, curPos.py, 0}, {curPos.px, curPos.py+1, 0}, {curPos.px+1, curPos.py, 0}, {curPos.px, curPos.py-1, 0}};
 
-    //Move left
-    if(board->canIMoveCell(curPos.px-1, curPos.py)){
-        dScore = rand()%2;
-        if(dScore != 1) dScore = -1;
-        dScore *= calculateDistance({curPos.px-1, curPos.py}, {0, 7});
-        if(curPos.px == 7 && curPos.py == 0) dScore = 0;
-        GameBoard newBoard(board);
-        newBoard.selectCell(curPos.px, curPos.py, 1);
-        newBoard.moveSelectedCell(curPos.px-1, curPos.py);
-        AIMove *pMove = new AIMove(curPos, {curPos.px-1, curPos.py}, 1 * dScore, parent, newBoard);
-		moveList.push_back(pMove);
+    for(Pos newPos : positions){
+        srand(time(NULL));
+        if(board->canIMoveCell(newPos)){
+            //Calculate motivator and demotivator
+            int new_short_distance = calcShortDistance(newPos, {0, 7, 0});
+            int new_long_distance = calcLongDistance(newPos, {0, 7, 0});
+            //dDemot = calcDemotivator(new_long_distance, new_short_distance);
+            //dMot = calcMotivator(newPos, new_long_distance);
+            //dMot = abs(dMot*dDemot/maxPathDepth);
+            //Ааа, почему без рандома не работает, не могу подобрать нужную функцию пути
+            dMot = calcMotivator(curPos, new_short_distance);
+            GameBoard newBoard(board);
+            newBoard.selectCell(curPos, 1);
+            newBoard.moveSelectedCell(newPos);
+            AIMove *pMove = new AIMove(curPos, newPos, dMot, parent, newBoard);
+            moveList.push_back(pMove);
+        }
     }
-
-    //Move top
-    if(board->canIMoveCell(curPos.px, curPos.py+1)){
-        dScore = rand()%2;
-        if(dScore != 1) dScore = -1;
-        dScore *= calculateDistance({curPos.px, curPos.py+1}, {0, 7});
-        if(curPos.px == 7 && curPos.py == 0) dScore = 0;
-        GameBoard newBoard(board);
-        newBoard.selectCell(curPos.px, curPos.py, 1);
-        newBoard.moveSelectedCell(curPos.px, curPos.py+1);
-        AIMove *pMove = new AIMove(curPos, {curPos.px, curPos.py+1}, 1 * dScore, parent, newBoard);
-		moveList.push_back(pMove);
-    }
-
-    //Move right
-    if(board->canIMoveCell(curPos.px+1, curPos.py)){
-        dScore = rand()%2;
-        if(dScore != 1) dScore = -1;
-        dScore *= calculateDistance({curPos.px+1, curPos.py}, {0, 7});
-        if(curPos.px == 7 && curPos.py == 0) dScore = 0;
-        GameBoard newBoard(board);
-        newBoard.selectCell(curPos.px, curPos.py, 1);
-        newBoard.moveSelectedCell(curPos.px+1, curPos.py);
-        AIMove *pMove = new AIMove(curPos, {curPos.px+1, curPos.py}, 1 * dScore, parent, newBoard);
-		moveList.push_back(pMove);
-    }
-
-    //Move down
-    if(board->canIMoveCell(curPos.px, curPos.py-1)){
-        dScore = rand()%2;
-        if(dScore != 1) dScore = -1;
-        dScore *= calculateDistance({curPos.px, curPos.py-1}, {0, 7});
-        if(curPos.px == 0 && curPos.py == 7) dScore = 0;
-        GameBoard newBoard(board);
-        newBoard.selectCell(curPos.px, curPos.py, 1);
-        newBoard.moveSelectedCell(curPos.px, curPos.py-1);
-        AIMove *pMove = new AIMove(curPos, {curPos.px, curPos.py-1}, 1 * dScore, parent, newBoard);
-		moveList.push_back(pMove);
-    }
-
     return moveList;
+}
+
+/************************************************************************************/
+int32_t AIPlayer::calcMotivator(Pos newPos, int32_t score){
+    int lScore = calcShortDistance(newPos, {0, 7, 0});
+    return score - lScore;
+}
+
+int32_t AIPlayer::calcDemotivator(int32_t lScore, int32_t sScore){
+    int32_t nScore = ((lScore - sScore)+(randrange(2)-lScore)+(randrange(10)+sScore))*((float)lScore/(float(sScore)));
+    return nScore;
 }
 
 /************************************************************************************/
@@ -220,7 +220,7 @@ AIMove *AIPlayer::getBestMove(std::vector<AIMove*> &moveList, int layer, int max
 		//if we are in the last level we calculate the minimum
 		//and propagate it to the parent
 		int min = INT_MAX;
-		for(int j = 0; j < moveList.size(); j++){
+		for(size_t j = 0; j < moveList.size(); j++){
 			if(moveList[j]->score < min)
 				min = moveList[j]->score;
 		}
@@ -231,10 +231,10 @@ AIMove *AIPlayer::getBestMove(std::vector<AIMove*> &moveList, int layer, int max
 	}else{
 		//if we're not in the last level we need to propagate
 		//the minimum calculation first
-		for(int j = 0; j < moveList.size(); j++)
+		for(size_t j = 0; j < moveList.size(); j++)
 			getBestMove(moveList[j]->next,layer + 1, maxLayer);
 		int min = INT_MAX;
-		for(int j = 0; j < moveList.size(); j++){
+		for(size_t j = 0; j < moveList.size(); j++){
 			if(moveList[j]->score < min)
 				min = moveList[j]->score;
 		}
@@ -246,7 +246,7 @@ AIMove *AIPlayer::getBestMove(std::vector<AIMove*> &moveList, int layer, int max
 	if(layer == 0){
 		AIMove *retMove;
 		int maxV = INT_MIN;
-		for(int i = 0; i < moveList.size(); i++)
+		for(size_t i = 0; i < moveList.size(); i++)
 			if(moveList[i]->score > maxV){
 				maxV = moveList[i]->score;
 				retMove = moveList[i];

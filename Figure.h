@@ -10,17 +10,17 @@ public:
         owner_id = 99;
     }
 
-    void init(uint32_t fig_id, uint32_t owner_id){
+    void init(int32_t fig_id, int32_t owner_id){
         this->fig_id = fig_id;
         this->owner_id = owner_id;
     }
 
-    uint32_t getId() { return fig_id; }
-    uint32_t getOwnerId() { return owner_id; }
+    int32_t getId() { return fig_id; }
+    int32_t getOwnerId() { return owner_id; }
 
 private:
-    uint32_t fig_id;
-    uint32_t owner_id;
+    int32_t fig_id;
+    int32_t owner_id;
 };
 
 #endif
